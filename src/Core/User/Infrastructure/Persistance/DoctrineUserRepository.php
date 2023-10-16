@@ -36,6 +36,25 @@ class DoctrineUserRepository implements UserRepositoryInterface
 
         return $user;
     }
+
+    public function getInactiveUsers(): array
+    {
+        $users = $this->entityManager
+            ->createQueryBuilder()
+            ->select('u')
+            ->from(User::class, 'u')
+            ->where('u.isActive = :is_active')
+            ->setParameter(':is_active', 0)
+            ->getQuery()
+            ->getResult();
+
+        if (null === $users) {
+            throw new UserNotFoundException('Brak użytkowników spełniających kryteria.');
+        }
+
+        return $users;
+    }
+
     public function save(User $user): void
     {
         if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()])) {

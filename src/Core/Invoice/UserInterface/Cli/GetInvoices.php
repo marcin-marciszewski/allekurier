@@ -3,13 +3,15 @@
 namespace App\Core\Invoice\UserInterface\Cli;
 
 use App\Common\Bus\QueryBusInterface;
-use App\Core\Invoice\Application\DTO\InvoiceDTO;
-use App\Core\Invoice\Application\Query\GetInvoicesByStatusAndAmountGreater\GetInvoicesByStatusAndAmountGreaterQuery;
-use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use App\Core\Invoice\Application\DTO\InvoiceDTO;
+use App\Core\Invoice\Domain\Status\InvoiceStatus;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use App\Core\Invoice\Domain\Exception\InvoiceException;
+use App\Core\Invoice\Application\Query\GetInvoicesByStatusAndAmountGreater\GetInvoicesByStatusAndAmountGreaterQuery;
 
 #[AsCommand(
     name: 'app:invoice:get-by-status-and-amount',
@@ -24,7 +26,14 @@ class GetInvoices extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $status = strtolower($input->getArgument('status'));
+
+        if (!InvoiceStatus::isMatching($status)) {
+            throw new InvoiceException('Nieprawdiłowy status, wybierz jeden z: new, paid, canceled');
+        }
+
         $invoices = $this->bus->dispatch(new GetInvoicesByStatusAndAmountGreaterQuery(
+            InvoiceStatus::from($status),
             $input->getArgument('amount')
         ));
 

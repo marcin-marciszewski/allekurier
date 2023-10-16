@@ -8,5 +8,6 @@ class InvoiceDTO
         public readonly int $id,
         public readonly string $email,
         public readonly int $amount
-    ) {}
+    ) {
+    }
 }

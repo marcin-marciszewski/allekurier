@@ -2,15 +2,17 @@
 
 namespace App\Core\User\Infrastructure\Persistance;
 
-use App\Core\User\Domain\Exception\UserNotFoundException;
-use App\Core\User\Domain\Repository\UserRepositoryInterface;
 use App\Core\User\Domain\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
+use App\Core\User\Domain\Exception\UserException;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use App\Core\User\Domain\Exception\UserNotFoundException;
+use App\Core\User\Domain\Repository\UserRepositoryInterface;
 
 class DoctrineUserRepository implements UserRepositoryInterface
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly EventDispatcherInterface $eventDispatcher)
     {
     }
 
@@ -33,5 +35,23 @@ class DoctrineUserRepository implements UserRepositoryInterface
         }
 
         return $user;
+    }
+    public function save(User $user): void
+    {
+        if ($this->entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()])) {
+            throw new UserException('Użytkownik o tym adresie email już istnieje.');
+        }
+
+        $this->entityManager->persist($user);
+
+        $events = $user->pullEvents();
+        foreach ($events as $event) {
+            $this->eventDispatcher->dispatch($event);
+        }
+    }
+
+    public function flush(): void
+    {
+        $this->entityManager->flush();
     }
 }
